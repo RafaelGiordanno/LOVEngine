@@ -27,9 +27,9 @@ function love.load(arg)
             -- initialize editor
 		end
     end
+    
     love.graphics.setDefaultFilter('nearest', 'nearest')
-
-    screen = Terebi.newScreen(GAME_WIDTH, GAME_HEIGHT, 1):setBackgroundColor(64, 64, 64)
+    screen = Terebi.newScreen(GAME_WIDTH, GAME_HEIGHT, 2):setBackgroundColor(64, 64, 64)
 end
 
 function love.update(dt)
@@ -39,22 +39,20 @@ function love.update(dt)
     local node = map
     local nextNode = map.next
     while nextNode do
-        local intersect = {}
         local bx = node.x
         local by = node.y
         local ex = nextNode.x
         local ey = nextNode.y
 
         local px1 = player.pos.x
-        local py1 = player.pos.y + player.vel.y
+        local py1 = player.pos.y + player.h + player.vel.y
         local px2 = player.pos.x
-        local py2 = player.pos.y + player.h + player.vel.y
+        local py2 = player.pos.y
 
         -- checking vertical collision
-        -- to do: this is not working, fix it
-        if intersectLines(px1, py1, px2, py2, bx, by, ex, ey, intersect) then
+        local intersect = intersectSegments(px1, py1, px2, py2, bx, by, ex, ey)
+        if intersect ~= nil then
             player.vel.y = 0
-            print("colliding")
         end
         -- switching nodes
         node = nextNode
@@ -105,16 +103,23 @@ function love.keyreleased(key)
 end
 
 -- math stuff goes here
-function intersectLines (x1, y1, x2, y2, x3, y3, x4, y4, intersection)
-    d = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
-    if (d == 0) then return false end
-
-    if (intersection ~= nil) then
-        ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / d;
-        intersection = {
-            x = x1 + (x2 - x1) * ua,
-            y = y1 + (y2 - y1) * ua
-        }
+function intersectSegments (x1, y1, x2, y2, x3, y3, x4, y4)
+    local d = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1)
+    if (d == 0) then
+        return nil
     end
-    return true
+
+    local yd = y1 - y3
+    local xd = x1 - x3
+    local ua = ((x4 - x3) * yd - (y4 - y3) * xd) / d
+    if (ua < 0 or ua > 1) then
+         return nil
+    end
+
+    local ub = ((x2 - x1) * yd - (y2 - y1) * xd) / d
+    if (ub < 0 or ub > 1) then
+        return nil
+    end
+
+    return { x = x1 + (x2 - x1) * ua, y = y1 + (y2 - y1) * ua }
 end
