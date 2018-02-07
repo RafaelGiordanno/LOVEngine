@@ -7,16 +7,26 @@ local GAME_HEIGHT = 9 * 20
 
 local GRAVITY = 9.8
 local player = {
-    pos = { x = 120, y = 24 },
+    pos = { x = 190, y = 24 },
     vel = { x = 0, y = 0 },
     w = 16, 
     h = 16
 }
 
+local buttons = {
+    right = false,
+    left = false
+}
+
 -- map is a linked list of points
+map = { next = map, x = 16, y = 140 }
 map = { next = map, x = 80, y = 140 }
-map = { next = map, x = 180, y = 140}
-map = { next = map, x = 196, y = 156}
+map = { next = map, x = 96, y = 156 }
+map = { next = map, x = 140, y = 156 }
+map = { next = map, x = 156, y = 160 }
+map = { next = map, x = 188, y = 160 }
+map = { next = map, x = 200, y = 140 }
+map = { next = map, x = 240, y = 140 }
 
 function love.load(arg)
     for k, v in ipairs(arg) do
@@ -29,10 +39,21 @@ function love.load(arg)
     end
     
     love.graphics.setDefaultFilter('nearest', 'nearest')
+    -- apply the default filter
+    Terebi.initializeLoveDefaults()
     screen = Terebi.newScreen(GAME_WIDTH, GAME_HEIGHT, 2):setBackgroundColor(64, 64, 64)
 end
 
 function love.update(dt)
+    -- input handling
+    if buttons.right then
+        player.vel.x = player.vel.x + 16 * dt
+    elseif buttons.left then
+        player.vel.x = player.vel.x - 16 * dt
+    else
+        player.vel.x = lume.lerp(player.vel.x, 0, 0.2)
+    end
+
     player.vel.y = player.vel.y + GRAVITY * dt
 
     -- checking collisions...
@@ -45,7 +66,7 @@ function love.update(dt)
         local ey = nextNode.y
 
         local px1 = player.pos.x
-        local py1 = player.pos.y + player.h + player.vel.y
+        local py1 = player.pos.y + player.h + player.vel.y + 0.5
         local px2 = player.pos.x
         local py2 = player.pos.y
 
@@ -53,13 +74,16 @@ function love.update(dt)
         local intersect = intersectSegments(px1, py1, px2, py2, bx, by, ex, ey)
         if intersect ~= nil then
             player.vel.y = 0
+            if intersect.y > player.pos.y then
+                player.pos.y = intersect.y - player.h + 1.5
+            end
         end
         -- switching nodes
         node = nextNode
         nextNode = nextNode.next
     end
 
-    player.vel.x = lume.clamp(player.vel.x, -4, 4)
+    player.vel.x = lume.clamp(player.vel.x, -1, 1)
     player.vel.y = lume.clamp(player.vel.y, -4, 4)
 
     -- updating player's position
@@ -80,6 +104,7 @@ function render()
         node = nextNode
         nextNode = nextNode.next
     end
+    love.graphics.print(love.timer.getFPS(), GAME_WIDTH - 32, GAME_HEIGHT - 32)
 end
 
 function love.draw()
@@ -87,10 +112,15 @@ function love.draw()
 end
 
 function love.keypressed(key)
-
+    if key == "right" or key == "d" then
+        buttons.right = true
+    elseif key == "left" or key == "a" then
+        buttons.left = true
+    end
 end
 
 function love.keyreleased(key)
+    -- support buttons
     if key == '=' or key == '+' then
         screen:increaseScale()
     end
@@ -100,6 +130,14 @@ function love.keyreleased(key)
     if key == 'f11' then
         screen:toggleFullscreen()
     end
+
+    -- player buttons
+    if key == "right" or key == "d" then
+        buttons.right = false
+    elseif key == "left" or key == "a" then
+        buttons.left = false
+    end
+    
 end
 
 -- math stuff goes here
