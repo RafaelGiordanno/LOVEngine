@@ -7,7 +7,7 @@ local GAME_HEIGHT = 9 * 20
 
 local GRAVITY = 9.8
 local player = {
-    pos = { x = 190, y = 24 },
+    pos = { x = 80, y = 24 },
     vel = { x = 0, y = 0 },
     w = 16, 
     h = 16
@@ -18,15 +18,18 @@ local buttons = {
     left = false
 }
 
+local stateTime = 0
+local spectralRealm = false
+
 -- map is a linked list of points
-map = { next = map, x = 16, y = 140 }
-map = { next = map, x = 80, y = 140 }
-map = { next = map, x = 96, y = 156 }
-map = { next = map, x = 140, y = 156 }
-map = { next = map, x = 156, y = 160 }
-map = { next = map, x = 188, y = 160 }
-map = { next = map, x = 200, y = 140 }
-map = { next = map, x = 240, y = 140 }
+map = { next = map, x = 16, y = 140, xb = 0, yb = 140, xe = 16, ye = 80 }
+map = { next = map, x = 80, y = 140, xb = 0, yb = 140, xe = 80, ye = 80 }
+map = { next = map, x = 96, y = 156, xb = 80, yb = 156, xe = 96, ye = 96 }
+map = { next = map, x = 140, y = 156, xb = 188, yb = 156, xe = 140, ye = 96 }
+map = { next = map, x = 156, y = 160, xb = 188, yb = 160, xe = 156, ye = 100 }
+map = { next = map, x = 188, y = 160, xb = 224, yb = 160, xe = 188, ye = 100 }
+map = { next = map, x = 200, y = 140, xb = 256, yb = 140, xe = 200, ye = 80 }
+map = { next = map, x = 240, y = 140, xb = 288, yb = 140, xe = 240, ye = 80 }
 
 function love.load(arg)
     for k, v in ipairs(arg) do
@@ -45,6 +48,27 @@ function love.load(arg)
 end
 
 function love.update(dt)
+    stateTime = stateTime + dt
+
+    -- moving walls around...
+    local node = map
+    while node do
+        if spectralRealm then
+            node.x = lume.lerp(node.x, node.xe, 0.01)
+            node.y = lume.lerp(node.y, node.ye, 0.01)
+            if node.y < node.ye + 0.2 and node.y > node.ye - 0.2 then
+                spectralRealm = false
+            end
+        else
+            node.x = lume.lerp(node.x, node.xb, 0.01)
+            node.y = lume.lerp(node.y, node.yb, 0.01)
+            if node.y < node.yb + 0.2 and node.y > node.yb - 0.2 then
+                spectralRealm = true
+            end
+        end
+        -- switching nodes
+        node = node.next
+    end
     -- input handling
     if buttons.right then
         player.vel.x = player.vel.x + 16 * dt
@@ -57,6 +81,17 @@ function love.update(dt)
     player.vel.y = player.vel.y + GRAVITY * dt
 
     -- checking collisions...
+    checkCollisions()
+
+    player.vel.x = lume.clamp(player.vel.x, -1, 1)
+    player.vel.y = lume.clamp(player.vel.y, -4, 4)
+
+    -- updating player's position
+    player.pos.x = player.pos.x + player.vel.x
+    player.pos.y = player.pos.y + player.vel.y
+end
+
+function checkCollisions()
     local node = map
     local nextNode = map.next
     while nextNode do
@@ -82,13 +117,6 @@ function love.update(dt)
         node = nextNode
         nextNode = nextNode.next
     end
-
-    player.vel.x = lume.clamp(player.vel.x, -1, 1)
-    player.vel.y = lume.clamp(player.vel.y, -4, 4)
-
-    -- updating player's position
-    player.pos.x = player.pos.x + player.vel.x
-    player.pos.y = player.pos.y + player.vel.y
 end
 
 function render()
